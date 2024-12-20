@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    ports:
+      - "3000:3000"
+      - "2222:22"
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - DB_TYPE=mysql
+      - DB_HOST=redmine-db:3306
+      - DB_NAME=gitea
+      - DB_USER=gitea
+      - DB_PASSWD=gitea_password
+    volumes:
+      - gitea-data:/data
+    restart: unless-stopped
+
+  redmine:
+    image: redmine:latest
+    container_name: redmine
+    ports:
+      - "8080:3000"
+    environment:
+      REDMINE_DB_MYSQL: redmine-db
+      REDMINE_DB_PASSWORD: root_password
+      REDMINE_DB_USERNAME: redmine
+      REDMINE_DB_DATABASE: redmine
+    depends_on:
+      - redmine-db
+    volumes:
+      - redmine-data:/usr/src/redmine/files
+    restart: unless-stopped
+
+  redmine-db:
+    image: mysql:5.7
+    container_name: redmine-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: redmine
+      MYSQL_USER: redmine
+      MYSQL_PASSWORD: root_password 
+    volumes:
+      - redmine-db-data:/var/lib/mysql
+    restart: unless-stopped
+
+  drone:
+    image: drone/drone:latest
+    container_name: drone
+    ports:
+      - "8000:80"
+    environment:
+      DRONE_RPC_SECRET: mydrone
+      DRONE_SERVER_HOST: http://192.168.1.100:8000
+      DRONE_SERVER_PROTO: http
+      DRONE_GITEA_SERVER: http://192.168.1.100:3000
+      DRONE_GITEA_CLIENT_ID: b8e54d92-c6fc-4fa7-8b83-6783ad2f5624
+      DRONE_GITEA_CLIENT_SECRET: gto_sbgpe3zfd53nkl3iqlemrgylpgzamkaliyrqlwy44w7qkj2tkwqa
+      DRONE_AGENT_ENABLED: true
+      DRONE_USER_CREATE: username:admin1,admin:true
+    depends_on:
+      - gitea
+    volumes:
+      - drone-data:/var/lib/drone
+    restart: unless-stopped
+
+  registry:
+    image: registry:2
+    container_name: registry
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+    restart: unless-stopped
+
+volumes:
+  gitea-data:
+  redmine-data:
+  redmine-db-data:
+  drone-data:
+  registry-data:
+
